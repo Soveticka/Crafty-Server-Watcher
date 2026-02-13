@@ -84,6 +84,15 @@ class CooldownConfig:
 
 
 @dataclass
+class WebhookConfig:
+    """Webhook notification settings."""
+
+    enabled: bool = False
+    url: str = ""
+    label: str = "Crafty Server Starter"
+
+
+@dataclass
 class LoggingConfig:
     """Logging destination and rotation settings."""
 
@@ -111,6 +120,7 @@ class AppConfig:
     polling: PollingConfig = field(default_factory=PollingConfig)
     cooldowns: CooldownConfig = field(default_factory=CooldownConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    webhook: WebhookConfig = field(default_factory=WebhookConfig)
     health: HealthConfig = field(default_factory=HealthConfig)
 
 
@@ -197,6 +207,15 @@ def _load_logging(raw: dict[str, Any]) -> LoggingConfig:
     )
 
 
+def _load_webhook(raw: dict[str, Any]) -> WebhookConfig:
+    cfg = WebhookConfig(
+        enabled=_get(raw, "enabled", bool, WebhookConfig.enabled),
+        url=_get(raw, "url", str, WebhookConfig.url),
+        label=_get(raw, "label", str, WebhookConfig.label),
+    )
+    if cfg.enabled and not cfg.url:
+        raise ConfigError("webhook.enabled is true but webhook.url is not set.")
+    return cfg
 def _load_health(raw: dict[str, Any]) -> HealthConfig:
     return HealthConfig(
         enabled=_get(raw, "enabled", bool, HealthConfig.enabled),
@@ -265,6 +284,8 @@ def load_config(path: str | Path) -> AppConfig:
     # -- Logging --
     logging_cfg = _load_logging(raw.get("logging", {}))
 
+    # -- Webhook --
+    webhook_cfg = _load_webhook(raw.get("webhook", {}))
     # -- Health --
     health_cfg = _load_health(raw.get("health", {}))
 
@@ -274,6 +295,7 @@ def load_config(path: str | Path) -> AppConfig:
         polling=polling,
         cooldowns=cooldowns,
         logging=logging_cfg,
+        webhook=webhook_cfg,
         health=health_cfg,
     )
 
