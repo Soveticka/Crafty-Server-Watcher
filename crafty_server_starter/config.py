@@ -54,6 +54,7 @@ class ServerConfig:
     crafty_server_id: str
     listen_port: int
     listen_host: str = "0.0.0.0"
+    edition: str = "java"  # "java" or "bedrock"
     idle_timeout_minutes: int = 10
     start_timeout_seconds: int = 180
     motd_hibernating: str = "§7⏳ Server is hibernating. Connect to wake it up!"
@@ -143,11 +144,15 @@ def _load_server(name: str, raw: dict[str, Any]) -> ServerConfig:
     port = raw.get("listen_port")
     if port is None:
         raise ConfigError(f"Server '{name}': 'listen_port' is required.")
+    edition = _get(raw, "edition", str, ServerConfig.edition).lower()
+    if edition not in ("java", "bedrock"):
+        raise ConfigError(f"Server '{name}': edition must be 'java' or 'bedrock', got '{edition}'.")
     return ServerConfig(
         name=name,
         crafty_server_id=str(cid),
         listen_port=int(port),
         listen_host=_get(raw, "listen_host", str, ServerConfig.listen_host),
+        edition=edition,
         idle_timeout_minutes=_get(raw, "idle_timeout_minutes", int, ServerConfig.idle_timeout_minutes),
         start_timeout_seconds=_get(raw, "start_timeout_seconds", int, ServerConfig.start_timeout_seconds),
         motd_hibernating=_get(raw, "motd_hibernating", str, ServerConfig.motd_hibernating),

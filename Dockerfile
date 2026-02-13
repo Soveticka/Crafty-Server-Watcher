@@ -21,6 +21,7 @@ ENV CRAFTY_SERVER_STARTER_CONFIG=/config/config.yaml
 # Expose common Minecraft ports (override in docker-compose)
 # Users will map their specific ports via -p or docker-compose
 EXPOSE 25565
+EXPOSE 19132/udp
 
 ENTRYPOINT ["python", "-m", "crafty_server_starter"]
 CMD ["--config", "/config/config.yaml"]
