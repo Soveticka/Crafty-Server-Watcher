@@ -93,6 +93,15 @@ class LoggingConfig:
 
 
 @dataclass
+class HealthConfig:
+    """Health/status HTTP endpoint settings."""
+
+    enabled: bool = True
+    host: str = "127.0.0.1"
+    port: int = 8095
+
+
+@dataclass
 class AppConfig:
     """Top-level application configuration."""
 
@@ -101,6 +110,7 @@ class AppConfig:
     polling: PollingConfig = field(default_factory=PollingConfig)
     cooldowns: CooldownConfig = field(default_factory=CooldownConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    health: HealthConfig = field(default_factory=HealthConfig)
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +192,14 @@ def _load_logging(raw: dict[str, Any]) -> LoggingConfig:
     )
 
 
+def _load_health(raw: dict[str, Any]) -> HealthConfig:
+    return HealthConfig(
+        enabled=_get(raw, "enabled", bool, HealthConfig.enabled),
+        host=_get(raw, "host", str, HealthConfig.host),
+        port=_get(raw, "port", int, HealthConfig.port),
+    )
+
+
 def load_config(path: str | Path) -> AppConfig:
     """Load and validate configuration from a YAML file.
 
@@ -242,12 +260,16 @@ def load_config(path: str | Path) -> AppConfig:
     # -- Logging --
     logging_cfg = _load_logging(raw.get("logging", {}))
 
+    # -- Health --
+    health_cfg = _load_health(raw.get("health", {}))
+
     config = AppConfig(
         crafty=crafty,
         servers=servers,
         polling=polling,
         cooldowns=cooldowns,
         logging=logging_cfg,
+        health=health_cfg,
     )
 
     # Resolve the API token from the environment.

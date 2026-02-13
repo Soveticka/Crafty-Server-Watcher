@@ -54,3 +54,10 @@ logging:
   file: "/var/log/crafty-server-starter/service.log"
   max_bytes: 10485760    # 10 MB
   backup_count: 5
+
+# ── Health endpoint ───────────────────────────────────────────
+health:
+  enabled: true           # set to false to disable
+  host: "127.0.0.1"       # bind address (use 0.0.0.0 to expose)
+  port: 8095              # GET /health and GET /status
+
