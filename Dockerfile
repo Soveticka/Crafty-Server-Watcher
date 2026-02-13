@@ -22,5 +22,10 @@ ENV CRAFTY_SERVER_STARTER_CONFIG=/config/config.yaml
 # Users will map their specific ports via -p or docker-compose
 EXPOSE 25565
 
+# Health check endpoint (default port 8095)
+EXPOSE 8095
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8095/health')" || exit 1
+
 ENTRYPOINT ["python", "-m", "crafty_server_starter"]
 CMD ["--config", "/config/config.yaml"]
