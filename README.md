@@ -1,0 +1,191 @@
+# Crafty Server Starter
+
+Auto-hibernate idle Minecraft servers and wake them on player connect, powered by the [Crafty Controller](https://craftycontrol.com) API v2.
+
+## Features
+
+- **Idle shutdown** — Stops servers via Crafty API when 0 players for a configurable duration
+- **Wake-on-connect** — Binds to MC ports while servers are offline; shows a custom MOTD and kicks login attempts with a "starting…" message, then triggers a start via Crafty API
+- **Multi-server** — Manage any number of Minecraft Java servers, each on a separate port
+- **Anti-flap** — Start grace, stop cooldown, and cycle-count-based flap guard
+- **Minimal dependencies** — Python 3.11 + PyYAML only
+
+## Requirements
+
+- Crafty Controller 4.x with API v2 access
+- A dedicated Crafty API user/role (see [Crafty API Setup](#crafty-api-setup))
+
+---
+
+## Deployment — Docker (Recommended)
+
+### 1. Create your config
+
+```bash
+mkdir crafty-server-starter && cd crafty-server-starter
+curl -O https://raw.githubusercontent.com/OWNER/crafty-server-starter/main/config.example.yaml
+cp config.example.yaml config.yaml
+nano config.yaml    # set your Crafty server UUIDs and ports
+```
+
+### 2. Create a `.env` file for the API token
+
+```bash
+echo "CRAFTY_API_TOKEN=your-token-here" > .env
+chmod 600 .env
+```
+
+### 3. Create `docker-compose.yml`
+
+```yaml
+services:
+  crafty-server-starter:
+    image: ghcr.io/OWNER/crafty-server-starter:latest
+    container_name: crafty-server-starter
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+    environment:
+      - CRAFTY_API_TOKEN=${CRAFTY_API_TOKEN}
+```
+
+> **Why `network_mode: host`?** The service must bind directly to the MC server ports on your host so that players connect to the proxy when servers are hibernating.
+
+### 4. Start
+
+```bash
+docker compose up -d
+docker compose logs -f
+```
+
+### Updating (Docker)
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+---
+
+## Deployment — Manual
+
+<details>
+<summary>Click to expand manual deployment instructions</summary>
+
+### Requirements
+
+- Linux (tested on Debian 13 / Trixie)
+- Python ≥ 3.11
+- PyYAML (`pip install pyyaml`)
+
+### Install
+
+```bash
+# 1. Clone
+sudo git clone <this-repo> /opt/crafty-server-starter
+cd /opt/crafty-server-starter
+
+# 2. Run installer (creates user, venv, directories, systemd service)
+sudo bash install.sh
+
+# 3. Configure
+sudo nano /etc/crafty-server-starter/config.yaml   # set server IDs & ports
+sudo nano /etc/crafty-server-starter/env            # set CRAFTY_API_TOKEN
+
+# 4. Start
+sudo systemctl start crafty-server-starter
+sudo systemctl status crafty-server-starter
+
+# 5. Logs
+journalctl -u crafty-server-starter -f
+tail -f /var/log/crafty-server-starter/service.log
+```
+
+### Updating (Manual)
+
+```bash
+cd /opt/crafty-server-starter
+sudo systemctl stop crafty-server-starter
+sudo git pull
+sudo find . -type d -name __pycache__ -exec rm -rf {} +
+sudo systemctl start crafty-server-starter
+```
+
+If the systemd service file changed:
+
+```bash
+sudo cp systemd/crafty-server-starter.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart crafty-server-starter
+```
+
+</details>
+
+---
+
+## Configuration
+
+See [`config.example.yaml`](config.example.yaml) for all available options.
+
+### Crafty API Setup
+
+1. Create a **dedicated Crafty user** (e.g., `auto-starter`)
+2. Create a **role** with only **Commands** permission on your managed servers
+3. Assign the role to the user
+4. Generate a long-lived API token for this user
+5. Pass the token via the `CRAFTY_API_TOKEN` environment variable
+
+### Server Mapping
+
+Each server entry maps a listening port to a Crafty server UUID:
+
+```yaml
+servers:
+  vanilla:
+    crafty_server_id: "5adcec83-684c-4555-a7e9-9d913203d07e"
+    listen_port: 25565
+    idle_timeout_minutes: 10
+    start_timeout_seconds: 180
+```
+
+The `crafty_server_id` can be found in the Crafty dashboard URL or via `GET /api/v2/servers`.
+
+---
+
+## Architecture
+
+Single Python asyncio daemon:
+
+| Module | Purpose |
+|---|---|
+| `idle_monitor.py` | Polls Crafty API, drives per-server state machine |
+| `proxy_listener.py` | Per-port TCP server (fake MC protocol) |
+| `mc_protocol.py` | Minecraft protocol parsing (handshake, status, login) |
+| `crafty_api.py` | Async Crafty API v2 client (stdlib `http.client`) |
+| `server_state.py` | 7-state machine with timing/cooldown logic |
+| `config.py` | YAML config loader and validation |
+| `logger.py` | Rotating file + stderr logging |
+
+### State Machine
+
+```
+UNKNOWN → ONLINE / IDLE / STOPPED / CRASHED
+ONLINE  → IDLE / STOPPED / CRASHED
+IDLE    → ONLINE / STOPPING / STOPPED / CRASHED
+STOPPING → STOPPED / CRASHED
+STOPPED  → STARTING / ONLINE
+STARTING → ONLINE / STOPPED / CRASHED
+CRASHED  → STOPPED / ONLINE
+```
+
+## Security
+
+- API token passed via environment variable, never in config files or logs
+- Dedicated least-privilege Crafty user/role
+- systemd sandboxing (manual deploy): `ProtectSystem=strict`, `NoNewPrivileges`, `PrivateTmp`, etc.
+- Docker: minimal `python:3.11-slim` image, read-only config mount
+
+## License
+
+MIT

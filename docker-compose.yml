@@ -1,0 +1,10 @@
+services:
+  crafty-server-starter:
+    image: ghcr.io/OWNER/crafty-server-starter:latest # ← replace OWNER with your GitHub username
+    container_name: crafty-server-starter
+    restart: unless-stopped
+    network_mode: host # Required: bind directly to host ports for MC clients
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+    environment:
+      - CRAFTY_API_TOKEN=${CRAFTY_API_TOKEN} # set in .env file or shell
