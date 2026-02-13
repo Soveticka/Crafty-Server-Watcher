@@ -54,6 +54,7 @@ class ServerConfig:
     crafty_server_id: str
     listen_port: int
     listen_host: str = "0.0.0.0"
+    edition: str = "java"  # "java" or "bedrock"
     idle_timeout_minutes: int = 10
     start_timeout_seconds: int = 180
     motd_hibernating: str = "§7⏳ Server is hibernating. Connect to wake it up!"
@@ -102,6 +103,15 @@ class LoggingConfig:
 
 
 @dataclass
+class HealthConfig:
+    """Health/status HTTP endpoint settings."""
+
+    enabled: bool = True
+    host: str = "127.0.0.1"
+    port: int = 8095
+
+
+@dataclass
 class AppConfig:
     """Top-level application configuration."""
 
@@ -111,6 +121,7 @@ class AppConfig:
     cooldowns: CooldownConfig = field(default_factory=CooldownConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     webhook: WebhookConfig = field(default_factory=WebhookConfig)
+    health: HealthConfig = field(default_factory=HealthConfig)
 
 
 # ---------------------------------------------------------------------------
@@ -153,11 +164,15 @@ def _load_server(name: str, raw: dict[str, Any]) -> ServerConfig:
     port = raw.get("listen_port")
     if port is None:
         raise ConfigError(f"Server '{name}': 'listen_port' is required.")
+    edition = _get(raw, "edition", str, ServerConfig.edition).lower()
+    if edition not in ("java", "bedrock"):
+        raise ConfigError(f"Server '{name}': edition must be 'java' or 'bedrock', got '{edition}'.")
     return ServerConfig(
         name=name,
         crafty_server_id=str(cid),
         listen_port=int(port),
         listen_host=_get(raw, "listen_host", str, ServerConfig.listen_host),
+        edition=edition,
         idle_timeout_minutes=_get(raw, "idle_timeout_minutes", int, ServerConfig.idle_timeout_minutes),
         start_timeout_seconds=_get(raw, "start_timeout_seconds", int, ServerConfig.start_timeout_seconds),
         motd_hibernating=_get(raw, "motd_hibernating", str, ServerConfig.motd_hibernating),
@@ -201,6 +216,14 @@ def _load_webhook(raw: dict[str, Any]) -> WebhookConfig:
     if cfg.enabled and not cfg.url:
         raise ConfigError("webhook.enabled is true but webhook.url is not set.")
     return cfg
+def _load_health(raw: dict[str, Any]) -> HealthConfig:
+    return HealthConfig(
+        enabled=_get(raw, "enabled", bool, HealthConfig.enabled),
+        host=_get(raw, "host", str, HealthConfig.host),
+        port=_get(raw, "port", int, HealthConfig.port),
+    )
+
+
 def load_config(path: str | Path) -> AppConfig:
     """Load and validate configuration from a YAML file.
 
@@ -263,6 +286,8 @@ def load_config(path: str | Path) -> AppConfig:
 
     # -- Webhook --
     webhook_cfg = _load_webhook(raw.get("webhook", {}))
+    # -- Health --
+    health_cfg = _load_health(raw.get("health", {}))
 
     config = AppConfig(
         crafty=crafty,
@@ -271,6 +296,7 @@ def load_config(path: str | Path) -> AppConfig:
         cooldowns=cooldowns,
         logging=logging_cfg,
         webhook=webhook_cfg,
+        health=health_cfg,
     )
 
     # Resolve the API token from the environment.
