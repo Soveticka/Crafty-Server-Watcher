@@ -8,7 +8,7 @@
 
 # ── Crafty API connection ───────────────────────────────────────
 crafty:
-  base_url: "https://localhost:8443"
+  base_url: "https://crafty_ip:8443"   # IP address of the Crafty server
   api_token_env: "CRAFTY_API_TOKEN"    # env var that holds the token
   verify_tls: true                      # true for Let's Encrypt certs
 

@@ -1,6 +1,6 @@
 services:
   crafty-server-starter:
-    image: ghcr.io/OWNER/crafty-server-starter:latest # ← replace OWNER with your GitHub username
+    image: ghcr.io/Soveticka/crafty-server-starter:latest
     container_name: crafty-server-starter
     restart: unless-stopped
     network_mode: host # Required: bind directly to host ports for MC clients
