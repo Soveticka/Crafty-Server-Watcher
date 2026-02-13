@@ -1,6 +1,6 @@
 # Crafty Server Starter
 
-Auto-hibernate idle Minecraft servers and wake them on player connect, powered by the [Crafty Controller](https://craftycontrol.com) API v2.
+Auto-hibernate idle Minecraft servers and wake them on player connect, powered by the [Crafty Controller](https://craftycontrol.com) ([GitHub](https://gitlab.com/crafty-controller/crafty-4)) API v2.
 
 ## Features
 
@@ -23,7 +23,7 @@ Auto-hibernate idle Minecraft servers and wake them on player connect, powered b
 
 ```bash
 mkdir crafty-server-starter && cd crafty-server-starter
-curl -O https://raw.githubusercontent.com/OWNER/crafty-server-starter/main/config.example.yaml
+curl -O https://raw.githubusercontent.com/Soveticka/crafty-server-starter/main/config.example.yaml
 cp config.example.yaml config.yaml
 nano config.yaml    # set your Crafty server UUIDs and ports
 ```
@@ -40,7 +40,7 @@ chmod 600 .env
 ```yaml
 services:
   crafty-server-starter:
-    image: ghcr.io/OWNER/crafty-server-starter:latest
+    image: ghcr.io/Soveticka/crafty-server-starter:latest
     container_name: crafty-server-starter
     restart: unless-stopped
     network_mode: host
@@ -83,7 +83,7 @@ docker compose up -d
 
 ```bash
 # 1. Clone
-sudo git clone <this-repo> /opt/crafty-server-starter
+sudo git clone https://github.com/Soveticka/crafty-server-starter.git /opt/crafty-server-starter
 cd /opt/crafty-server-starter
 
 # 2. Run installer (creates user, venv, directories, systemd service)
