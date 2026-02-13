@@ -20,6 +20,7 @@ servers:
     crafty_server_id: "5adcec83-684c-4555-a7e9-9d913203d07e"
     listen_port: 25565
     listen_host: "0.0.0.0"
+    edition: java               # "java" (TCP) or "bedrock" (UDP/RakNet)
     idle_timeout_minutes: 10
     start_timeout_seconds: 180
     motd_hibernating: "§7⏳ Server is hibernating. Connect to wake it up!"
@@ -29,10 +30,20 @@ servers:
     crafty_server_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     listen_port: 25566
     listen_host: "0.0.0.0"
+    edition: java
     idle_timeout_minutes: 15
     start_timeout_seconds: 300
     motd_hibernating: "§7⏳ Modded server sleeping. Connect to wake it!"
     kick_message: "§eModded server is booting!\n§7Please reconnect in ~2 minutes."
+
+  bedrock-survival:
+    crafty_server_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+    listen_port: 19132
+    listen_host: "0.0.0.0"
+    edition: bedrock            # Bedrock uses UDP (RakNet) on port 19132
+    idle_timeout_minutes: 10
+    start_timeout_seconds: 120
+    motd_hibernating: "Server hibernating - connect to wake up!"
 
 # ── Polling ─────────────────────────────────────────────────────
 polling:

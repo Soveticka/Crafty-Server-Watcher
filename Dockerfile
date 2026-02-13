@@ -21,6 +21,7 @@ ENV CRAFTY_SERVER_STARTER_CONFIG=/config/config.yaml
 # Expose common Minecraft ports (override in docker-compose)
 # Users will map their specific ports via -p or docker-compose
 EXPOSE 25565
+EXPOSE 19132/udp
 
 # Health check endpoint (default port 8095)
 EXPOSE 8095
