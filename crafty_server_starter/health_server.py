@@ -52,7 +52,7 @@ class HealthServer:
             self._host,
             self._port,
         )
-        log.info("Health server listening on %s:%d", self._host, self._port)
+        log.info(f"Health server listening on {self._host}:{self._port}")
 
         await shutdown.wait()
 

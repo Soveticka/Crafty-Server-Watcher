@@ -84,10 +84,7 @@ class BedrockProxyProtocol(asyncio.DatagramProtocol):
         # Open Connection Request 1 — someone is trying to connect
         if is_open_connection_request_1(data):
             log.info(
-                "Bedrock connection attempt on port %d from %s — triggering wake-up for '%s'",
-                self._sm.cfg.listen_port,
-                addr[0],
-                self._name,
+                f"Bedrock connection attempt on port {self._sm.cfg.listen_port} from {addr[0]} — triggering wake-up for '{self._name}'",
             )
 
             # Reject with Incompatible Protocol (graceful rejection)
@@ -100,7 +97,7 @@ class BedrockProxyProtocol(asyncio.DatagramProtocol):
             return
 
     def error_received(self, exc: Exception) -> None:
-        log.warning("Bedrock proxy UDP error on '%s': %s", self._name, exc)
+        log.warning(f"Bedrock proxy UDP error on '{self._name}': {exc}")
 
     def connection_lost(self, exc: Exception | None) -> None:
         pass
@@ -127,7 +124,7 @@ class BedrockProxyManager:
 
     async def run(self, shutdown: asyncio.Event) -> None:
         """Run the Bedrock proxy manager until shutdown."""
-        log.info("Bedrock proxy manager starting (%d servers)", len(self._sms))
+        log.info(f"Bedrock proxy manager starting ({len(self._sms)} servers)")
         while not shutdown.is_set():
             await self.ensure_listeners()
             with contextlib.suppress(TimeoutError):
@@ -145,9 +142,7 @@ class BedrockProxyManager:
             if name in self._start_lockout:
                 if sm.state in (State.STOPPED, State.CRASHED):
                     self._start_lockout.discard(name)
-                    log.info(
-                        "Bedrock start lockout cleared for '%s' (state=%s)", name, sm.state.value
-                    )
+                    log.info(f"Bedrock start lockout cleared for '{name}' (state={sm.state.value})")
                 else:
                     continue
 
@@ -167,18 +162,11 @@ class BedrockProxyManager:
             )
             self._transports[name] = transport
             log.info(
-                "Bedrock proxy listening on %s:%d for '%s'",
-                sm.cfg.listen_host,
-                sm.cfg.listen_port,
-                name,
+                f"Bedrock proxy listening on {sm.cfg.listen_host}:{sm.cfg.listen_port} for '{name}'",
             )
         except OSError as exc:
             log.error(
-                "Cannot bind Bedrock proxy on %s:%d for '%s': %s",
-                sm.cfg.listen_host,
-                sm.cfg.listen_port,
-                name,
-                exc,
+                f"Cannot bind Bedrock proxy on {sm.cfg.listen_host}:{sm.cfg.listen_port} for '{name}': {exc}",
             )
 
     async def _stop_listener(self, name: str) -> None:
@@ -188,9 +176,7 @@ class BedrockProxyManager:
             transport.close()
             self._transports[name] = None
             log.info(
-                "Bedrock proxy stopped for '%s' (port %d)",
-                name,
-                self._sms[name].cfg.listen_port,
+                f"Bedrock proxy stopped for '{name}' (port {self._sms[name].cfg.listen_port})",
             )
 
     async def trigger_start(self, name: str) -> None:
@@ -215,11 +201,9 @@ class BedrockProxyManager:
             await self._api.start_server(sm.cfg.crafty_server_id)
             sm.transition(State.STARTING)
             log.info(
-                "Bedrock port %d released and start_server sent for '%s' (lockout active)",
-                sm.cfg.listen_port,
-                name,
+                f"Bedrock port {sm.cfg.listen_port} released and start_server sent for '{name}' (lockout active)",
             )
         except Exception:
-            log.exception("Failed to start Bedrock server '%s' via Crafty API", name)
+            log.exception(f"Failed to start Bedrock server '{name}' via Crafty API")
             self._start_lockout.discard(name)
             await self._start_listener(name)

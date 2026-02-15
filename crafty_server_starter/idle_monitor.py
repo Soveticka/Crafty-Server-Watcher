@@ -60,7 +60,7 @@ class IdleMonitor:
 
     async def run(self, shutdown: asyncio.Event) -> None:
         """Run the polling loop until *shutdown* is set."""
-        log.info("Idle monitor started (poll every %ds)", self._poll_cfg.interval_seconds)
+        log.info(f"Idle monitor started (poll every {self._poll_cfg.interval_seconds}s)")
 
         # Initial state discovery
         await self._poll_all()
@@ -94,30 +94,25 @@ class IdleMonitor:
             except ConnectionError as exc:
                 self._consecutive_failures += 1
                 log.warning(
-                    "Crafty API unreachable (attempt %d/%d): %s",
-                    self._consecutive_failures,
-                    self._poll_cfg.api_max_retries,
-                    exc,
+                    f"Crafty API unreachable (attempt {self._consecutive_failures}/{self._poll_cfg.api_max_retries}): {exc}",
                 )
                 if self._consecutive_failures >= self._poll_cfg.api_max_retries:
                     log.error(
-                        "Crafty API unreachable after %d attempts — "
+                        f"Crafty API unreachable after {self._consecutive_failures} attempts — "
                         "holding current state, will keep retrying.",
-                        self._consecutive_failures,
                     )
                 await asyncio.sleep(self._poll_cfg.api_retry_delay_seconds)
             except CraftyApiError as exc:
                 if exc.status == 403:
                     log.critical(
-                        "Crafty API returned 403 for server '%s' — "
+                        f"Crafty API returned 403 for server '{name}' — "
                         "token may be invalid. Skipping all API calls until fixed.",
-                        name,
                     )
                     # Stop polling — manual intervention needed.
                     return
-                log.error("Crafty API error for server '%s': %s", name, exc)
+                log.error(f"Crafty API error for server '{name}': {exc}")
             except Exception:
-                log.exception("Unexpected error polling server '%s'", name)
+                log.exception(f"Unexpected error polling server '{name}'")
 
     async def _poll_one(self, name: str, sm: ServerStateMachine) -> None:
         """Fetch stats for a single server and drive its state machine."""
@@ -130,13 +125,7 @@ class IdleMonitor:
         int_ping: str = str(stats.get("int_ping_results", ""))
 
         log.debug(
-            "Poll '%s': state=%s running=%s online=%d crashed=%s int_ping=%s",
-            name,
-            sm.state.value,
-            running,
-            online,
-            crashed,
-            int_ping,
+            f"Poll '{name}': state={sm.state.value} running={running} online={online} crashed={crashed} int_ping={int_ping}",
         )
 
         # ── Determine desired state ─────────────────────────────────
@@ -156,9 +145,7 @@ class IdleMonitor:
                     time.monotonic() - sm.last_start_time > sm.cfg.start_timeout_seconds
                 ):
                     log.error(
-                        "Server '%s': start timed out after %ds — giving up.",
-                        name,
-                        sm.cfg.start_timeout_seconds,
+                        f"Server '{name}': start timed out after {sm.cfg.start_timeout_seconds}s — giving up.",
                     )
                     sm.transition(State.STOPPED)
                 # else: still starting, keep waiting.
@@ -215,9 +202,7 @@ class IdleMonitor:
                 time.monotonic() - (sm.last_start_time or 0)
             )
             log.info(
-                "Server '%s': in start-grace period (%.0fs remaining), idle check paused.",
-                name,
-                remaining,
+                f"Server '{name}': in start-grace period ({remaining:.0f}s remaining), idle check paused.",
             )
             return
 
@@ -227,20 +212,15 @@ class IdleMonitor:
                 time.monotonic() - (sm.last_stop_time or 0)
             )
             log.info(
-                "Server '%s': in stop-cooldown (%.0fs remaining), idle check paused.",
-                name,
-                remaining,
+                f"Server '{name}': in stop-cooldown ({remaining:.0f}s remaining), idle check paused.",
             )
             return
 
         # Flap guard.
         if sm.is_flapping():
             log.warning(
-                "Server '%s': flap guard active — too many start/stop cycles "
-                "in the last %d minutes. Waiting %d minutes before next stop.",
-                name,
-                self._cd_cfg.flap_window_minutes,
-                self._cd_cfg.flap_backoff_minutes,
+                f"Server '{name}': flap guard active — too many start/stop cycles "
+                f"in the last {self._cd_cfg.flap_window_minutes} minutes. Waiting {self._cd_cfg.flap_backoff_minutes} minutes before next stop.",
             )
             return
 
@@ -248,20 +228,13 @@ class IdleMonitor:
             elapsed = sm.idle_elapsed()
             remaining = sm.cfg.idle_timeout_minutes * 60 - elapsed
             log.info(
-                "Server '%s': idle for %.0fs / %ds, shutdown in %.0fs.",
-                name,
-                elapsed,
-                sm.cfg.idle_timeout_minutes * 60,
-                remaining,
+                f"Server '{name}': idle for {elapsed:.0f}s / {sm.cfg.idle_timeout_minutes * 60}s, shutdown in {remaining:.0f}s.",
             )
             return
 
         # ── Trigger shutdown ────────────────────────────────────────
         log.info(
-            "Server '%s' (port %d): idle for %.0fs — triggering shutdown.",
-            name,
-            sm.cfg.listen_port,
-            sm.idle_elapsed(),
+            f"Server '{name}' (port {sm.cfg.listen_port}): idle for {sm.idle_elapsed():.0f}s — triggering shutdown.",
         )
         sm.transition(State.STOPPING)
         try:
@@ -269,7 +242,7 @@ class IdleMonitor:
             if self._webhook:
                 await self._webhook.notify_stopped(name, idle_seconds=sm.idle_elapsed())
         except Exception:
-            log.exception("Failed to stop server '%s' via Crafty API", name)
+            log.exception(f"Failed to stop server '{name}' via Crafty API")
             # Revert to IDLE so we retry on the next poll.
             sm.transition(State.ONLINE)  # STOPPING → … can't revert cleanly
             # The next poll will detect running=true and re-evaluate.

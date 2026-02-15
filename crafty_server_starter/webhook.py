@@ -101,9 +101,9 @@ class WebhookNotifier:
 
         try:
             await asyncio.to_thread(self._post_json, payload)
-            log.info("Webhook sent: %s for '%s'", title, server_name)
+            log.info(f"Webhook sent: {title} for '{server_name}'")
         except Exception:
-            log.exception("Failed to send webhook notification for '%s'", server_name)
+            log.exception(f"Failed to send webhook notification for '{server_name}'")
 
     def _build_discord_payload(self, title: str, description: str, color: int) -> dict[str, Any]:
         embed: dict[str, Any] = {
@@ -142,6 +142,6 @@ class WebhookNotifier:
             resp = conn.getresponse()
             if resp.status >= 400:
                 resp_body = resp.read().decode("utf-8", errors="replace")[:200]
-                log.warning("Webhook returned %d: %s", resp.status, resp_body)
+                log.warning(f"Webhook returned {resp.status}: {resp_body}")
         finally:
             conn.close()

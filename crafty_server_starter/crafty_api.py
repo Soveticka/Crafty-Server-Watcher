@@ -118,7 +118,7 @@ class CraftyApiClient:
             If the connection fails entirely.
         """
         body_str = json.dumps(body) if body else None
-        log.debug("%s %s", method, path)
+        log.debug(f"{method} {path}")
 
         try:
             status, data = await asyncio.to_thread(
@@ -135,7 +135,7 @@ class CraftyApiClient:
         if status >= 400:
             raise CraftyApiError(status, json.dumps(data), path)
 
-        log.debug("%s %s → %d", method, path, status)
+        log.debug(f"{method} {path} → {status}")
         return data
 
     # ------------------------------------------------------------------
@@ -167,7 +167,7 @@ class CraftyApiClient:
 
     async def start_server(self, server_id: str) -> bool:
         """``POST /api/v2/servers/{serverID}/action/start_server``."""
-        log.info("API → start_server %s", server_id)
+        log.info(f"API → start_server {server_id}")
         data = await self._request(
             "POST",
             f"/api/v2/servers/{server_id}/action/start_server",
@@ -176,7 +176,7 @@ class CraftyApiClient:
 
     async def stop_server(self, server_id: str) -> bool:
         """``POST /api/v2/servers/{serverID}/action/stop_server``."""
-        log.info("API → stop_server %s", server_id)
+        log.info(f"API → stop_server {server_id}")
         data = await self._request(
             "POST",
             f"/api/v2/servers/{server_id}/action/stop_server",
@@ -188,10 +188,10 @@ class CraftyApiClient:
 
         Useful for future enhancements (e.g., broadcasting shutdown warnings).
         """
-        log.info("API → stdin %s: %s", server_id, command)
+        log.info(f"API → stdin {server_id}: {command}")
         # The stdin endpoint expects text/plain body.
         body_str = command
-        log.debug("POST /api/v2/servers/%s/stdin", server_id)
+        log.debug(f"POST /api/v2/servers/{server_id}/stdin")
         try:
             status, data = await asyncio.to_thread(
                 self._request_sync,

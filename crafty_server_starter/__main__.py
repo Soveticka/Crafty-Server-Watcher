@@ -56,12 +56,12 @@ async def _run(config_path: str) -> None:
     try:
         cfg = load_config(config_path)
     except ConfigError as exc:
-        log.critical("Configuration error: %s", exc)
+        log.critical(f"Configuration error: {exc}")
         sys.exit(1)
 
     setup_logging(cfg.logging)
-    log.info("Crafty Server Starter v%s starting", __version__)
-    log.info("Managing %d server(s)", len(cfg.servers))
+    log.info(f"Crafty Server Starter v{__version__} starting")
+    log.info(f"Managing {len(cfg.servers)} server(s)")
 
     # -- Events ---------------------------------------------------------------
     _shutdown_event = asyncio.Event()
@@ -91,10 +91,10 @@ async def _run(config_path: str) -> None:
 
     # Validate connectivity and server mappings.
     if not await api.check_health():
-        log.critical("Cannot reach Crafty API at %s — aborting", cfg.crafty.base_url)
+        log.critical(f"Cannot reach Crafty API at {cfg.crafty.base_url} — aborting")
         sys.exit(1)
 
-    log.info("Crafty API reachable at %s", cfg.crafty.base_url)
+    log.info(f"Crafty API reachable at {cfg.crafty.base_url}")
 
     # Build per-server state machines.
     from .server_state import ServerStateMachine
@@ -109,9 +109,7 @@ async def _run(config_path: str) -> None:
     for name, sm in state_machines.items():
         if sm.cfg.crafty_server_id not in known_ids:
             log.error(
-                "Server '%s': crafty_server_id '%s' not found in Crafty. Skipping.",
-                name,
-                sm.cfg.crafty_server_id,
+                f"Server '{name}': crafty_server_id '{sm.cfg.crafty_server_id}' not found in Crafty. Skipping.",
             )
 
     # -- Webhook (optional) ---------------------------------------------------
@@ -152,11 +150,11 @@ async def _run(config_path: str) -> None:
                 break
 
             # SIGHUP received — reload config.
-            log.info("Reloading configuration from %s", _config_path)
+            log.info(f"Reloading configuration from {_config_path}")
             try:
                 new_cfg = load_config(_config_path)
             except ConfigError as exc:
-                log.error("Config reload failed — keeping current config: %s", exc)
+                log.error(f"Config reload failed — keeping current config: {exc}")
                 continue
 
             # Apply per-server config changes (timeouts, MOTDs, kick message).
@@ -168,10 +166,7 @@ async def _run(config_path: str) -> None:
                     sm.cfg.motd_hibernating = new_srv.motd_hibernating
                     sm.cfg.kick_message = new_srv.kick_message
                     log.info(
-                        "Server '%s': config updated (idle=%dm, motd='%s')",
-                        name,
-                        new_srv.idle_timeout_minutes,
-                        new_srv.motd_hibernating,
+                        f"Server '{name}': config updated (idle={new_srv.idle_timeout_minutes}m, motd='{new_srv.motd_hibernating}')",
                     )
 
             # Apply cooldown changes.
@@ -197,7 +192,7 @@ async def _run(config_path: str) -> None:
 
 def _request_shutdown(sig: signal.Signals) -> None:
     """Signal handler — set the shutdown event."""
-    log.info("Received %s, shutting down…", sig.name)
+    log.info(f"Received {sig.name}, shutting down…")
     if _shutdown_event is not None:
         _shutdown_event.set()
 

@@ -94,10 +94,7 @@ class ServerStateMachine:
         valid = _VALID_TRANSITIONS.get(self.state, set())
         if new_state not in valid:
             log.warning(
-                "Server '%s': invalid transition %s → %s (ignored)",
-                self.cfg.name,
-                self.state.value,
-                new_state.value,
+                f"Server '{self.cfg.name}': invalid transition {self.state.value} → {new_state.value} (ignored)",
             )
             return
 
@@ -122,11 +119,7 @@ class ServerStateMachine:
             self.idle_since = None
 
         log.info(
-            "Server '%s' (port %d): %s → %s",
-            self.cfg.name,
-            self.cfg.listen_port,
-            old.value,
-            new_state.value,
+            f"Server '{self.cfg.name}' (port {self.cfg.listen_port}): {old.value} → {new_state.value}",
         )
 
     # -- Timing queries -------------------------------------------------------

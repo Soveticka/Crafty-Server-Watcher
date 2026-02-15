@@ -68,7 +68,7 @@ class ProxyManager:
                 if sm.state in (State.STOPPED, State.CRASHED):
                     # Server went back to stopped — clear lockout, allow proxy.
                     self._start_lockout.discard(name)
-                    log.info("Start lockout cleared for '%s' (state=%s)", name, sm.state.value)
+                    log.info(f"Start lockout cleared for '{name}' (state={sm.state.value})")
                 else:
                     # Still starting/online — keep port free.
                     continue
@@ -106,27 +106,18 @@ class ProxyManager:
                 )
                 self._listeners[name] = server
                 log.info(
-                    "Proxy listener started on %s:%d for server '%s'",
-                    sm.cfg.listen_host,
-                    sm.cfg.listen_port,
-                    name,
+                    f"Proxy listener started on {sm.cfg.listen_host}:{sm.cfg.listen_port} for server '{name}'",
                 )
                 return
             except OSError as exc:
                 if attempt < 14:
                     log.debug(
-                        "Port %d not free yet (attempt %d): %s",
-                        sm.cfg.listen_port,
-                        attempt + 1,
-                        exc,
+                        f"Port {sm.cfg.listen_port} not free yet (attempt {attempt + 1}): {exc}",
                     )
                     await asyncio.sleep(2)
                 else:
                     log.error(
-                        "Cannot bind to port %d for server '%s' after 30s: %s",
-                        sm.cfg.listen_port,
-                        name,
-                        exc,
+                        f"Cannot bind to port {sm.cfg.listen_port} for server '{name}' after 30s: {exc}",
                     )
 
     async def _stop_listener(self, name: str) -> None:
@@ -139,9 +130,7 @@ class ProxyManager:
         self._listeners[name] = None
         sm = self._sms[name]
         log.info(
-            "Proxy listener stopped on port %d for server '%s'",
-            sm.cfg.listen_port,
-            name,
+            f"Proxy listener stopped on port {sm.cfg.listen_port} for server '{name}'",
         )
 
     async def _handle_client(
@@ -172,7 +161,7 @@ class ProxyManager:
             # Client disconnected or timed out — ignore silently.
             pass
         except Exception:
-            log.exception("Error handling client from %s on port %d", peer, sm.cfg.listen_port)
+            log.exception(f"Error handling client from {peer} on port {sm.cfg.listen_port}")
         finally:
             try:
                 writer.close()
@@ -227,11 +216,7 @@ class ProxyManager:
         login = LoginStart.parse(stream)
 
         log.info(
-            "Wake-up trigger from player '%s' (%s) on port %d (server '%s')",
-            login.player_name,
-            peer[0],
-            sm.cfg.listen_port,
-            name,
+            f"Wake-up trigger from player '{login.player_name}' ({peer[0]}) on port {sm.cfg.listen_port} (server '{name}')",
         )
 
         # Send Disconnect (kick) message
@@ -261,16 +246,14 @@ class ProxyManager:
                 await self._api.start_server(sm.cfg.crafty_server_id)
                 sm.transition(State.STARTING)
                 log.info(
-                    "Port %d released and start_server sent for '%s' (lockout active)",
-                    sm.cfg.listen_port,
-                    name,
+                    f"Port {sm.cfg.listen_port} released and start_server sent for '{name}' (lockout active)",
                 )
                 if self._webhook:
                     self._start_notify_task = asyncio.ensure_future(
                         self._webhook.notify_started(name, player_name=login.player_name)
                     )
             except Exception:
-                log.exception("Failed to start server '%s' via Crafty API", name)
+                log.exception(f"Failed to start server '{name}' via Crafty API")
                 # Clear lockout and re-bind the proxy so players can still see the MOTD.
                 self._start_lockout.discard(name)
                 await self._start_listener(name)
