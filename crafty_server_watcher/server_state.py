@@ -33,7 +33,8 @@ _VALID_TRANSITIONS: dict[State, set[State]] = {
     State.STOPPING: {State.STOPPED, State.CRASHED},
     State.STOPPED: {State.STARTING, State.ONLINE},
     State.STARTING: {State.ONLINE, State.STOPPED, State.CRASHED},
-    State.CRASHED: {State.STOPPED, State.ONLINE},
+    # STARTING: _handle_login() wakes servers from CRASHED as well as STOPPED.
+    State.CRASHED: {State.STOPPED, State.ONLINE, State.STARTING},
 }
 
 

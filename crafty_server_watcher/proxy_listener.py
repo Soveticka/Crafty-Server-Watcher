@@ -239,12 +239,16 @@ class ProxyManager:
             # Lock out this server from ensure_listeners re-binding.
             self._start_lockout.add(name)
 
+            # Transition BEFORE sleeping: a concurrent ensure_listeners() poll
+            # landing in the window below would otherwise see state == STOPPED,
+            # clear the lockout and re-bind the port under the MC server.
+            sm.transition(State.STARTING)
+
             # Give the OS a moment to fully release the socket.
             await asyncio.sleep(5)
 
             try:
                 await self._api.start_server(sm.cfg.crafty_server_id)
-                sm.transition(State.STARTING)
                 log.info(
                     f"Port {sm.cfg.listen_port} released and start_server sent for '{name}' (lockout active)",
                 )
@@ -254,6 +258,8 @@ class ProxyManager:
                     )
             except Exception:
                 log.exception(f"Failed to start server '{name}' via Crafty API")
-                # Clear lockout and re-bind the proxy so players can still see the MOTD.
+                # Roll back the optimistic transition, clear the lockout and
+                # re-bind the proxy so players can still see the MOTD.
+                sm.transition(State.STOPPED)
                 self._start_lockout.discard(name)
                 await self._start_listener(name)
